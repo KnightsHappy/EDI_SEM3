@@ -1,0 +1,18 @@
+# slam_params.yaml
+slam_toolbox:
+  ros__parameters:
+    # Required Parameters set according to your robot's setup
+    odom_frame: "odom"             # Using standard 'odom'. Verify if your robot uses a different frame.
+    map_frame: "map"               # The map frame, usually 'map'
+    base_frame: "base_footprint"        # Your robot's base frame
+    scan_topic: "/scan"            # Your laser scan topic
+
+    # General Configuration
+    resolution: 0.05               
+    map_update_interval: 1.0       
+    
+    # Ceres Scan Matcher Parameters
+    solver_plugin: "solver_plugins::CeresSolver"
+    ceres_linear_solver: "SPARSE_NORMAL_CHOLESKY"
+    ceres_preconditioner: "SCHUR_JACOBI"
+    ceres_trust_strategy: "LEVENBERG_MARQUARDT"
