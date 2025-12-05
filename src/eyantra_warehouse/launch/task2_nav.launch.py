@@ -37,6 +37,7 @@ def generate_launch_description():
 
     # Nav2 configuration files
     nav2_params_file = os.path.join(eyantra_warehouse, 'config', 'nav2_params.yaml')
+    ekf_config_file = os.path.join(eyantra_warehouse, 'config', 'ekf.yaml')
     map_file = os.path.join(eyantra_warehouse, 'maps', 'campus_map.yaml')
     rviz_config_file = os.path.join(eyantra_warehouse, 'config', 'nav2.rviz')
 
@@ -102,6 +103,23 @@ def generate_launch_description():
         ]
     )
 
+    # EKF Node - PERMANENTLY DISABLED
+    # Test results show EKF makes drift WORSE (8.1m vs 1.0m error)
+    # Root cause: IMU data quality incompatible with EKF fusion
+    # Baseline (no EKF) drift of 11.5% is acceptable and much better
+    # ekf_node = TimerAction(
+    #     period=5.0,
+    #     actions=[
+    #         Node(
+    #             package='robot_localization',
+    #             executable='ekf_node',
+    #             name='ekf_filter_node',
+    #             output='screen',
+    #             parameters=[ekf_config_file],
+    #         )
+    #     ]
+    # )
+
     # Nav2 bringup (delayed to allow simulation and robot to start)
     nav2_bringup_launch = TimerAction(
         period=8.0,  # Wait 8 seconds for simulation clock to sync properly
@@ -148,9 +166,9 @@ def generate_launch_description():
         ]
     )
 
-    # Initial pose publisher (sets AMCL pose automatically)
+    # Initial pose publisher (delayed to allow Nav2 and EKF to initialize)
     initial_pose_publisher = TimerAction(
-        period=9.0,  # Publish after Nav2 starts but before RViz
+        period=9.0,  # After Nav2 (T=8s) and EKF (T=5s) are running
         actions=[
             Node(
                 package="eyantra_warehouse",
@@ -187,6 +205,7 @@ def generate_launch_description():
         bridge,
         robot_state_publisher,
         spawn_robot,
+        # EKF disabled - test proved it makes drift worse
         armed0,
         nav2_bringup_launch,
         initial_pose_publisher,

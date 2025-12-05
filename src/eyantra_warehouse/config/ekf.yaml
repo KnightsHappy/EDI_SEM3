@@ -1,0 +1,127 @@
+# Conservative EKF Configuration for Stable Sensor Fusion
+# Designed to reduce drift without causing instability
+# Version: Debugged and Stable
+
+ekf_filter_node:
+  ros__parameters:
+    # Core settings
+    frequency: 30.0  # Reduced from 50 for stability
+    use_sim_time: true
+    two_d_mode: true
+    
+    # CRITICAL: Do not publish odom->base_link transform
+    # Let the wheel odometry handle that to prevent conflicts
+    publish_tf: false
+    
+    # Generous timeouts to prevent startup issues
+    sensor_timeout: 1.0
+    transform_timeout: 1.0
+    
+    # Smooth startup - critical for preventing jumps
+    smooth_lagged_data: true
+    history_length: 2.0  # 2 seconds of smoothing
+    
+    # Diagnostics
+    print_diagnostics: false
+    debug: false
+    
+    # Frames
+    map_frame: map
+    odom_frame: odom
+    base_link_frame: ebot_base_link
+    world_frame: odom
+    
+    # ============================================
+    # WHEEL ODOMETRY CONFIGURATION
+    # ============================================
+    odom0: /odom
+    
+    # Conservative approach: Use ONLY velocities from wheels
+    # Position and orientation accumulate error, so we don't use them
+    odom0_config: [
+      false, false, false,    # x, y, z position - NO (drifts)
+      false, false, false,    # roll, pitch, yaw - NO (drifts)
+      true,  true,  false,    # vx, vy, vz velocity - YES (reliable from wheels)
+      false, false, false,    # vroll, vpitch, vyaw - NO (use IMU instead)
+      false, false, false     # ax, ay, az acceleration - NO
+    ]
+    
+    odom0_differential: false
+    odom0_relative: false
+    odom0_queue_size: 10
+    
+    # Rejection thresholds - be permissive
+    odom0_pose_rejection_threshold: 10.0
+    odom0_twist_rejection_threshold: 5.0
+    
+    # ============================================
+    # IMU CONFIGURATION  
+    # ============================================
+    imu0: /imu
+    
+    # Use IMU for: angular velocity (gyro) and linear acceleration
+    # Do NOT use orientation (drifts over time)
+    imu0_config: [
+      false, false, false,    # x, y, z position - NO
+      false, false, false,    # roll, pitch, yaw orientation - NO (drifts without magnetometer)
+      false, false, false,    # vx, vy, vz velocity - NO (use wheels)
+      false, false, true,     # vroll, vpitch, vyaw - YES (gyro is accurate)
+      true,  true,  false     # ax, ay, az - YES (helps with dynamics)
+    ]
+    
+    imu0_differential: false
+    imu0_relative: false
+    imu0_queue_size: 10
+    imu0_remove_gravitational_acceleration: true
+    
+    # Rejection thresholds
+    imu0_pose_rejection_threshold: 10.0
+    imu0_twist_rejection_threshold: 5.0
+    imu0_linear_acceleration_rejection_threshold: 5.0
+    
+    # ============================================
+    # PROCESS NOISE COVARIANCE
+    # ============================================
+    # How much we expect the state to change between updates
+    # Higher = trust sensors more, lower = trust model more
+    # Order: x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az
+    
+    process_noise_covariance: [
+      0.05, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+      0.0,  0.05, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+      0.0,  0.0,  0.06, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+      0.0,  0.0,  0.0,  0.03, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+      0.0,  0.0,  0.0,  0.0,  0.03, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.06, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.025,0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.025,0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.04, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.01, 0.0,  0.0,  0.0,  0.0,  0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.01, 0.0,  0.0,  0.0,  0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.02, 0.0,  0.0,  0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.01, 0.0,  0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.01, 0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.015
+    ]
+    
+    # ============================================
+    # INITIAL STATE COVARIANCE
+    # ============================================
+    # Start with low uncertainty (we know initial state from spawn)
+    initial_estimate_covariance: [
+      1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+      0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+      0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+      0.0,  0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+      0.0,  0.0,  0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,  0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,  0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  1e-9, 0.0,  0.0,  0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  1e-9, 0.0,  0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  1e-9, 0.0,
+      0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  1e-9
+    ]

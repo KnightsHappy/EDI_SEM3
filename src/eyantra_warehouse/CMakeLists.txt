@@ -50,6 +50,10 @@ install(PROGRAMS
   scripts/publish_initial_pose.py
   scripts/test_nav_goal.py
   scripts/nav_goal_gui.py
+  scripts/test_ekf_drift.py
+  scripts/demo_obstacle_avoidance.py
+  scripts/costmap_probe.py
+  scripts/monitor_navigation.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
